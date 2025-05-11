@@ -20,6 +20,8 @@ class Alx_Module_Manager():
     __folder_blacklist: set[str] = set()
     __file_blacklist: set[str] = set()
 
+    __resources: bpy.utils.previews.ImagePreviewCollection = None
+
     __mute: bool = True
 
     def __init__(self, path: str, globals: dict[str, Any], mute: Optional[bool] = True):
@@ -46,6 +48,41 @@ class Alx_Module_Manager():
 
     def developer_blacklist_file(self, files: set[str]):
         self.__file_blacklist.add(*files)
+
+    def developer_load_resources(self, icons_definitions: list[dict["name":str, "path":str, "resource_type":str]]):
+        """
+        name : str [MUST BE UNIQUE]\n
+        path : str\n [MUST BE RELATIVE TO THE FOLDER CONTAINING THE ADDON'S INIT FILE]
+        resource_type : str ['IMAGE', 'MOVIE', 'BLEND', 'FONT']\n
+        """
+        if (self.__resources is None):
+            self.__resources = bpy.utils.previews.new()
+
+        name_id_pairs = {}
+        for entry in icons_definitions:
+
+            if ({"name", "path", "resource_type"}.issubset(set(entry.keys()))):
+                path_object = Path(f"{self.__module_path}{os_separator if self.__module_path[-1] != os_separator else ''}{entry['path']}")
+                if (path_object.exists()) and (path_object.is_file()):
+                    self.__resources.load(
+                        entry["name"],
+                        str(path_object),
+                        entry["resource_type"],
+                        True
+                    )
+
+                name_id_pairs.update({entry["name"]: self.__resources[entry["name"]].icon_id})
+
+        icons_path_object = Path(f"{self.__module_path}\\icons.py")
+
+        icons_path_object.parent.mkdir(exist_ok=True, parents=True)
+        with icons_path_object.open('w') as icon_file:
+            text = "icons_dictionary={\n"
+
+            for string in [*[f"\"{entry_name}\" : {entry_id},\n" for entry_name, entry_id in name_id_pairs.items()], "\n}"]:
+                text += string
+
+            icon_file.write(text)
 
     def __gather_addon_folders(self, path: str, folder_blacklist: set[str] = {}):
         """
@@ -115,7 +152,8 @@ class Alx_Module_Manager():
                         reload_line = f"{file_name} = importlib.reload({file_name})"
                         exec(reload_line, self.__init_globals)
                 except Exception as error:
-                    print(f"[{file_name}] {error}")
+                    if (self.__mute == False):
+                        print(f"[{file_name}] {error}")
 
     def __register_addon_classes(self, addon_classes: list[object]):
         for addon_class in addon_classes:
@@ -154,3 +192,6 @@ class Alx_Module_Manager():
             except Exception as error:
                 if (self.__mute == False):
                     print(error)
+
+        if (self.__resources is not None):
+            bpy.utils.previews.remove(self.__resources)
