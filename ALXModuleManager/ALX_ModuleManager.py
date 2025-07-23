@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Any, Optional
 
 import bpy
+import bpy.utils.previews as previews
 
 
 class Alx_Module_Manager():
@@ -20,7 +21,7 @@ class Alx_Module_Manager():
     __folder_blacklist: set[str] = set()
     __file_blacklist: set[str] = set()
 
-    __resources: bpy.utils.previews.ImagePreviewCollection = None
+    __resources: previews.ImagePreviewCollection = None
 
     __mute: bool = True
 
@@ -56,7 +57,7 @@ class Alx_Module_Manager():
         resource_type : str ['IMAGE', 'MOVIE', 'BLEND', 'FONT']\n
         """
         if (self.__resources is None):
-            self.__resources = bpy.utils.previews.new()
+            self.__resources = previews.new()
 
         name_id_pairs = {}
         for entry in icons_definitions:
@@ -194,4 +195,4 @@ class Alx_Module_Manager():
                     print(error)
 
         if (self.__resources is not None):
-            bpy.utils.previews.remove(self.__resources)
+            previews.remove(self.__resources)
