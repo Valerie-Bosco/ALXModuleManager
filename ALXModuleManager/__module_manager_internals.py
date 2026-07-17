@@ -1,44 +1,39 @@
+import importlib
 import os
+import re
 from contextlib import redirect_stdout
 from inspect import getmembers, isclass
 from pathlib import Path
-from typing import Any
 
 import bpy
 
 
 class ModuleManager:
-    init_globals: dict[str, Any]
-
-    bl_info: dict[str, Any]
-
     module_path: str
+    bl_info: dict
+    mute: bool
+
     folder_blacklist: set[str] = {"__pycache__"}
     file_blacklist: set[str] = {"__init__"}
-
-    mute: bool
 
     __module_folders: set[Path]
     __module_files: dict[str, Path]
     __module_classes: set[
-        bpy.types.Panel,
-        bpy.types.UIList,
-        bpy.types.Menu,
-        bpy.types.Header,
-        bpy.types.Operator,
-        bpy.types.KeyingSetInfo,
-        bpy.types.RenderEngine,
-        bpy.types.AssetShelf,
-        bpy.types.FileHandler,
-        bpy.types.PropertyGroup,
-        bpy.types.AddonPreferences,
-        bpy.types.NodeTree,
-        bpy.types.Node,
-        bpy.types.NodeSocket,
-    ]
-
-    def __init__(self):
-        pass
+        bpy.types.Panel
+        | bpy.types.UIList
+        | bpy.types.Menu
+        | bpy.types.Header
+        | bpy.types.Operator
+        | bpy.types.KeyingSetInfo
+        | bpy.types.RenderEngine
+        | bpy.types.AssetShelf
+        | bpy.types.FileHandler
+        | bpy.types.PropertyGroup
+        | bpy.types.AddonPreferences
+        | bpy.types.NodeTree
+        | bpy.types.Node
+        | bpy.types.NodeSocket
+        ]
 
     def register_modules(self):
         addon_name = self.bl_info.get("name")
@@ -46,43 +41,53 @@ class ModuleManager:
             f"----- ALX Module Manager -----\nRegistering {addon_name if addon_name is not None else "Generic Addon"} Modules"
         )
 
-        self.__module_folders = self.__gather_addon_folders(
+        self.__module_folders = self.gather_addon_folders(
             path=self.module_path, folder_blacklist=self.folder_blacklist
         )
-        self.__module_files = self.__gather_addon_files(
+        self.__module_files = self.gather_addon_files(
             folder_paths=self.__module_folders, file_blacklist=self.file_blacklist
         )
 
-        self.__execute_locals_update(self.module_path, self.__module_files)
+        self.import_files_to_global(
+            _module_path=self.module_path,
+            _mute=self.mute,
+            _module_files=self.__module_files,
+            _file_blacklist=self.file_blacklist,
+        )
 
-        self.__module_classes = self.__gather_classes_from_files(self.__module_files)
+        self.execute_locals_update(
+            _module_path=self.module_path,
+            _mute=self.mute,
+            _addon_files=self.__module_files,
+            _file_blacklist=self.file_blacklist,
+        )
+
+        self.__module_classes = self.gather_classes_from_files(
+            self.module_path, self.mute, self.__module_files, self.file_blacklist
+        )
         self.__register_addon_classes(self.__module_classes)
 
-    def unregister_module(self):
+    def unregister_modules(self):
         self.__unregister_addon_classes(self.__module_classes)
-
-    @staticmethod
-    def __register_class(addon_class):
-        pass
 
     def __register_addon_classes(
             self,
             addon_classes: set[
-                bpy.types.Panel,
-                bpy.types.UIList,
-                bpy.types.Menu,
-                bpy.types.Header,
-                bpy.types.Operator,
-                bpy.types.KeyingSetInfo,
-                bpy.types.RenderEngine,
-                bpy.types.AssetShelf,
-                bpy.types.FileHandler,
-                bpy.types.PropertyGroup,
-                bpy.types.AddonPreferences,
-                bpy.types.NodeTree,
-                bpy.types.Node,
-                bpy.types.NodeSocket,
-            ],
+                bpy.types.Panel
+                | bpy.types.UIList
+                | bpy.types.Menu
+                | bpy.types.Header
+                | bpy.types.Operator
+                | bpy.types.KeyingSetInfo
+                | bpy.types.RenderEngine
+                | bpy.types.AssetShelf
+                | bpy.types.FileHandler
+                | bpy.types.PropertyGroup
+                | bpy.types.AddonPreferences
+                | bpy.types.NodeTree
+                | bpy.types.Node
+                | bpy.types.NodeSocket
+                ],
     ):
         for addon_class in addon_classes:
             try:
@@ -90,27 +95,63 @@ class ModuleManager:
                     with open(os.devnull, "w") as print_discard_bin:
                         with redirect_stdout(print_discard_bin):
                             if "WorkSpaceTool" in [
-                                base.__name__ for base in addon_class.__bases__
+                                base.__name__
+                                for base in getattr(addon_class, "__bases__")
                             ]:
+                                addon_class: type[bpy.types.WorkSpaceTool]
                                 bpy.utils.register_tool(
                                     addon_class,
-                                    after=addon_class.after,
-                                    separator=addon_class.separator,
-                                    group=addon_class.group,
+                                    after=getattr(addon_class, "after", None),
+                                    separator=getattr(addon_class, "separator", False),
+                                    group=getattr(addon_class, "group", False),
                                 )
                             else:
+                                addon_class: type[
+                                    bpy.types.Panel
+                                    | bpy.types.UIList
+                                    | bpy.types.Menu
+                                    | bpy.types.Header
+                                    | bpy.types.Operator
+                                    | bpy.types.KeyingSetInfo
+                                    | bpy.types.RenderEngine
+                                    | bpy.types.AssetShelf
+                                    | bpy.types.FileHandler
+                                    | bpy.types.PropertyGroup
+                                    | bpy.types.AddonPreferences
+                                    | bpy.types.NodeTree
+                                    | bpy.types.Node
+                                    | bpy.types.NodeSocket
+                                    ]
                                 bpy.utils.register_class(addon_class)
                 else:
                     if "WorkSpaceTool" in [
-                        base.__name__ for base in addon_class.__bases__
+                        base.__name__ for base in getattr(addon_class, "__bases__")
                     ]:
+                        addon_class: type[bpy.types.WorkSpaceTool]
+
                         bpy.utils.register_tool(
                             addon_class,
-                            after=addon_class.after,
-                            separator=addon_class.separator,
-                            group=addon_class.group,
+                            after=getattr(addon_class, "after", None),
+                            separator=getattr(addon_class, "separator", False),
+                            group=getattr(addon_class, "group", False),
                         )
                     else:
+                        addon_class: type[
+                            bpy.types.Panel
+                            | bpy.types.UIList
+                            | bpy.types.Menu
+                            | bpy.types.Header
+                            | bpy.types.Operator
+                            | bpy.types.KeyingSetInfo
+                            | bpy.types.RenderEngine
+                            | bpy.types.AssetShelf
+                            | bpy.types.FileHandler
+                            | bpy.types.PropertyGroup
+                            | bpy.types.AddonPreferences
+                            | bpy.types.NodeTree
+                            | bpy.types.Node
+                            | bpy.types.NodeSocket
+                            ]
                         bpy.utils.register_class(addon_class)
 
             except Exception as error:
@@ -130,7 +171,7 @@ class ModuleManager:
                     print(error)
 
     @staticmethod
-    def __gather_addon_folders(path: str, folder_blacklist: set[str]):
+    def gather_addon_folders(path: str, folder_blacklist: set[str]):
         """
         IN path: __path__[0] from __init__ \n
         IN folder_blacklist: set[str] \n
@@ -138,7 +179,7 @@ class ModuleManager:
         RETURN addon_folders: set[Path] \n
         """
 
-        path_object: Path = Path(path)
+        path_object: Path = Path(path[0])
         addon_folders: set[Path] = set()
 
         if (path_object.exists()) and (path_object.is_dir()):
@@ -166,7 +207,7 @@ class ModuleManager:
         return addon_folders
 
     @staticmethod
-    def __gather_addon_files(folder_paths: set[Path], file_blacklist: set[str]):
+    def gather_addon_files(folder_paths: set[Path], file_blacklist: set[str]):
         """
         IN folder_paths: set[Path] \n
         IN file_blacklist: set[str] \n
@@ -187,66 +228,121 @@ class ModuleManager:
 
         return addon_files
 
-    def __gather_classes_from_files(self, _addon_files: dict[str, Path]) -> set[
-        bpy.types.Panel,
-        bpy.types.UIList,
-        bpy.types.Menu,
-        bpy.types.Header,
-        bpy.types.Operator,
-        bpy.types.KeyingSetInfo,
-        bpy.types.RenderEngine,
-        bpy.types.AssetShelf,
-        bpy.types.FileHandler,
-        bpy.types.PropertyGroup,
-        bpy.types.AddonPreferences,
-        bpy.types.NodeTree,
-        bpy.types.Node,
-        bpy.types.NodeSocket,
-    ]:
+    @staticmethod
+    def gather_classes_from_files(
+            _module_path: str,
+            _mute: bool,
+            _module_files: dict[str, Path],
+            _file_blacklist: set[str],
+    ) -> set[
+        bpy.types.Panel
+        | bpy.types.UIList
+        | bpy.types.Menu
+        | bpy.types.Header
+        | bpy.types.Operator
+        | bpy.types.KeyingSetInfo
+        | bpy.types.RenderEngine
+        | bpy.types.AssetShelf
+        | bpy.types.FileHandler
+        | bpy.types.PropertyGroup
+        | bpy.types.AddonPreferences
+        | bpy.types.NodeTree
+        | bpy.types.Node
+        | bpy.types.NodeSocket
+        ]:
 
-        addon_classes = set()
+        addon_classes: set[
+            bpy.types.Panel
+            | bpy.types.UIList
+            | bpy.types.Menu
+            | bpy.types.Header
+            | bpy.types.Operator
+            | bpy.types.KeyingSetInfo
+            | bpy.types.RenderEngine
+            | bpy.types.AssetShelf
+            | bpy.types.FileHandler
+            | bpy.types.PropertyGroup
+            | bpy.types.AddonPreferences
+            | bpy.types.NodeTree
+            | bpy.types.Node
+            | bpy.types.NodeSocket
+            ] = set()
 
-        if _addon_files is not None:
-            for file_name in _addon_files.keys():
-                if file_name not in self.file_blacklist:
+        if _module_files is not None:
+            _module_path = Path(_module_path[0])
+
+            addon_classes = set()
+
+            for file_name in _module_files.keys():
+                if file_name not in _file_blacklist:
                     for addon_class in getmembers(
-                            eval(file_name, self.init_globals), isclass
+                            globals().get(file_name),
+                            isclass,
                     ):
                         addon_classes.add(addon_class[1])
 
-        if not self.mute:
-            print_classes = [str(addon_class) for addon_class in addon_classes]
-            print_classes.sort()
-
-            for print_class in print_classes:
-                print(print_class.split(sep=".")[-1])
+            if not _mute:
+                for print_class in sorted(addon_classes, key=lambda cls: cls.__name__):
+                    print(print_class)
 
         return addon_classes
 
-    def __execute_locals_update(self, path: str, addon_files: dict[str, Path]):
-        for file_name in addon_files.keys():
+    @staticmethod
+    def import_files_to_global(
+            _module_path: str,
+            _mute: bool,
+            _module_files: dict[str, Path],
+            _file_blacklist: set[str],
+    ):
+        __globals = globals()
+        _module_path = _module_path[0]
+        _module_path_object = Path(_module_path)
+
+        for _file_name, _file_path in _module_files.items():
+            if _file_name not in _file_blacklist:
+                _relative_folder = _file_path.relative_to(_module_path, walk_up=False)
+
+                _module_name = f"ALXOverHaul{'.' if str(_relative_folder) in {'', '.'} else f'.{_relative_folder}.'}{_file_name}"
+
+                __globals[_file_name] = importlib.import_module(
+                    _module_name,
+                )
+
+    @staticmethod
+    def execute_locals_update(
+            _module_path: str,
+            _mute: bool,
+            _addon_files: dict[str, Path],
+            _file_blacklist: set[str],
+    ):
+
+        __globals = globals()
+        _module_path = Path(_module_path[0])
+        for file_name in _addon_files.keys():
             if (file_name != __name__.split(".")[-1]) and (
-                    file_name not in self.file_blacklist
+                    file_name not in _file_blacklist
             ):
+
                 try:
-                    if "importlib" not in self.init_globals:
-                        exec("import importlib", self.init_globals)
+                    file = _addon_files.get(file_name)
+                    if file is not None:
+                        _module_name = f"{_module_path.name}.{file.relative_to(_module_path, walk_up=False)}.{file_name}"
 
-                    if file_name not in self.init_globals:
-                        file = addon_files.get(file_name)
-                        if file is not None:
-                            relative_path = str(file.relative_to(path)).replace(
-                                os.sep, "."
+                        __globals[_module_name] = (
+                            importlib.reload(__globals[_module_name])
+                            if file_name in __globals
+                            else importlib.import_module(
+                                re.sub(
+                                    pattern=r"[\/\\]+",
+                                    repl=".",
+                                    string=_module_name,
+                                )
                             )
+                        )
 
-                            import_line = f"from . {relative_path if relative_path != '.' else ''} import {file_name}"
-                            exec(import_line, self.init_globals)
-                    else:
-                        reload_line = f"{file_name} = importlib.reload({file_name})"
-                        exec(reload_line, self.init_globals)
-                except Exception as error:
-                    if not self.mute:
-                        print(f"[{file_name}] {error}")
+                except Exception as _error:
+                    if not _mute:
+                        print(f"[{file_name}] {_error}")
 
     # def developer_load_resources(self, icons_definitions: list[dict[str]]):
     #     """
