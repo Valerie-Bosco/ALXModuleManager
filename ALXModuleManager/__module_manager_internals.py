@@ -281,10 +281,6 @@ class ModuleManager:
                     ):
                         addon_classes.add(addon_class[1])
 
-            if not _mute:
-                for print_class in sorted(addon_classes, key=lambda cls: cls.__name__):
-                    print(print_class)
-
         return addon_classes
 
     @staticmethod
