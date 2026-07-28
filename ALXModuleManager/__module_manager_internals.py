@@ -1,6 +1,5 @@
 import importlib
 import os
-import re
 from contextlib import redirect_stdout
 from inspect import getmembers, isclass
 from pathlib import Path
@@ -52,13 +51,6 @@ class ModuleManager:
             _module_path=self.module_path,
             _mute=self.mute,
             _module_files=self.__module_files,
-            _file_blacklist=self.file_blacklist,
-        )
-
-        self.execute_locals_update(
-            _module_path=self.module_path,
-            _mute=self.mute,
-            _addon_files=self.__module_files,
             _file_blacklist=self.file_blacklist,
         )
 
@@ -300,45 +292,14 @@ class ModuleManager:
 
                 _module_name = f"ALXOverHaul{'.' if str(_relative_folder) in {'', '.'} else f'.{_relative_folder}.'}{_file_name}"
 
-                __globals[_file_name] = importlib.import_module(
-                    _module_name,
-                )
-
-    @staticmethod
-    def execute_locals_update(
-            _module_path: str,
-            _mute: bool,
-            _addon_files: dict[str, Path],
-            _file_blacklist: set[str],
-    ):
-
-        __globals = globals()
-        _module_path = Path(_module_path[0])
-        for file_name in _addon_files.keys():
-            if (file_name != __name__.split(".")[-1]) and (
-                    file_name not in _file_blacklist
-            ):
-
-                try:
-                    file = _addon_files.get(file_name)
-                    if file is not None:
-                        _module_name = f"{_module_path.name}.{file.relative_to(_module_path, walk_up=False)}.{file_name}"
-
-                        __globals[_module_name] = (
-                            importlib.reload(__globals[_module_name])
-                            if file_name in __globals
-                            else importlib.import_module(
-                                re.sub(
-                                    pattern=r"[\/\\]+",
-                                    repl=".",
-                                    string=_module_name,
-                                )
-                            )
-                        )
-
-                except Exception as _error:
-                    if not _mute:
-                        print(f"[{file_name}] {_error}")
+                if _file_name in __globals:
+                    importlib.reload(__globals[_file_name])
+                    print(f"Reloaded: {_file_name}")
+                else:
+                    __globals[_file_name] = importlib.import_module(
+                        _module_name,
+                    )
+                    print(f"Imported: {_file_name}")
 
     # def developer_load_resources(self, icons_definitions: list[dict[str]]):
     #     """

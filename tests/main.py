@@ -132,14 +132,5 @@ def TEST_import_files_to_global():
     )
 
 
-def TEST__execute_locals_update():
-    ModuleManager().execute_locals_update(
-        _module_path=TEST_MODULE_PATH,
-        _mute=False,
-        _addon_files=TEST_ADDON_FILES,
-        _file_blacklist=set(),
-    )
-
-
 if __name__ == "__main__":
     TEST_import_files_to_global()
