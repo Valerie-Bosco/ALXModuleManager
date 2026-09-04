@@ -10,14 +10,13 @@ mm = None
 class ALXModuleManager(ModuleManager):
 
     def __init__(
-            self,
-            path: str,
-            bl_info: dict,
-            mute: bool,
-            folder_blacklist: Optional[set[str]] = None,
-            file_blacklist: Optional[set[str]] = None,
+        self,
+        path: str,
+        bl_info: dict,
+        mute: bool,
+        folder_blacklist: Optional[set[str]] = None,
+        file_blacklist: Optional[set[str]] = None,
     ):
-
         super().__init__()
         self.module_path = path
         self.bl_info = bl_info
@@ -28,10 +27,6 @@ class ALXModuleManager(ModuleManager):
             self.file_blacklist |= file_blacklist
 
         self.mute = mute
-
-        print(
-            f"\n\n\n\n\n----- ALX Module Manager -----\nInitialized for {addon_name if (addon_name := self.bl_info.get("name")) is not None else "Generic Addon"}"
-        )
 
     def register_modules(self):
         super().register_modules()

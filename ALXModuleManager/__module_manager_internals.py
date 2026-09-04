@@ -35,10 +35,13 @@ class ModuleManager:
     ]
 
     def register_modules(self):
-        addon_name = self.bl_info.get("name")
-        print(
-            f"----- ALX Module Manager -----\nRegistering {addon_name if addon_name is not None else "Generic Addon"} Modules"
+        addon_name: str = (
+            str(__name)
+            if (__name := self.bl_info.get("name")) is not None
+            else "ERROR_ADDON_NAME"
         )
+        print(f"\n\n\n\n\n----- ALX Module Manager -----\nInitialized for {addon_name}")
+        print(f"----- ALXModuleManager -----\nRegistering {addon_name} Modules")
 
         self.__module_folders = self.gather_addon_folders(
             path=self.module_path, folder_blacklist=self.folder_blacklist
@@ -48,6 +51,7 @@ class ModuleManager:
         )
 
         self.import_files_to_global(
+            _addon_name=addon_name,
             _module_path=self.module_path,
             _mute=self.mute,
             _module_files=self.__module_files,
@@ -277,11 +281,13 @@ class ModuleManager:
 
     @staticmethod
     def import_files_to_global(
+        _addon_name: str,
         _module_path: str,
         _mute: bool,
         _module_files: dict[str, Path],
         _file_blacklist: set[str],
     ):
+
         __globals = globals()
         _module_path = _module_path[0]
         _module_path_object = Path(_module_path)
@@ -289,8 +295,7 @@ class ModuleManager:
         for _file_name, _file_path in _module_files.items():
             if _file_name not in _file_blacklist:
                 _relative_folder = _file_path.relative_to(_module_path, walk_up=False)
-
-                _module_name = f"ALXOverHaul{'.' if str(_relative_folder) in {'', '.'} else f'.{_relative_folder}.'}{_file_name}"
+                _module_name = f"{_addon_name}{'.' if str(_relative_folder) in {'', '.'} else f'.{_relative_folder}.'}{_file_name}"
 
                 if _file_name in __globals:
                     importlib.reload(__globals[_file_name])

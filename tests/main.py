@@ -122,7 +122,7 @@ def TEST__gather_classes_from_files():
         _file_blacklist=set(),
     )
 
-
+#TODO add bl_info
 def TEST_import_files_to_global():
     ModuleManager().import_files_to_global(
         _module_path=TEST_MODULE_PATH,
