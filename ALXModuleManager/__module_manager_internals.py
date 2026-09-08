@@ -32,7 +32,7 @@ class ModuleManager:
         | bpy.types.NodeTree
         | bpy.types.Node
         | bpy.types.NodeSocket
-    ]
+        ]
 
     def register_modules(self):
         addon_name: str = (
@@ -67,23 +67,23 @@ class ModuleManager:
         self.__unregister_addon_classes(self.__module_classes)
 
     def __register_addon_classes(
-        self,
-        addon_classes: set[
-            bpy.types.Panel
-            | bpy.types.UIList
-            | bpy.types.Menu
-            | bpy.types.Header
-            | bpy.types.Operator
-            | bpy.types.KeyingSetInfo
-            | bpy.types.RenderEngine
-            | bpy.types.AssetShelf
-            | bpy.types.FileHandler
-            | bpy.types.PropertyGroup
-            | bpy.types.AddonPreferences
-            | bpy.types.NodeTree
-            | bpy.types.Node
-            | bpy.types.NodeSocket
-        ],
+            self,
+            addon_classes: set[
+                bpy.types.Panel
+                | bpy.types.UIList
+                | bpy.types.Menu
+                | bpy.types.Header
+                | bpy.types.Operator
+                | bpy.types.KeyingSetInfo
+                | bpy.types.RenderEngine
+                | bpy.types.AssetShelf
+                | bpy.types.FileHandler
+                | bpy.types.PropertyGroup
+                | bpy.types.AddonPreferences
+                | bpy.types.NodeTree
+                | bpy.types.Node
+                | bpy.types.NodeSocket
+                ],
     ):
         for addon_class in addon_classes:
             try:
@@ -117,7 +117,7 @@ class ModuleManager:
                                     | bpy.types.NodeTree
                                     | bpy.types.Node
                                     | bpy.types.NodeSocket
-                                ]
+                                    ]
                                 bpy.utils.register_class(addon_class)
                 else:
                     if "WorkSpaceTool" in [
@@ -147,7 +147,7 @@ class ModuleManager:
                             | bpy.types.NodeTree
                             | bpy.types.Node
                             | bpy.types.NodeSocket
-                        ]
+                            ]
                         bpy.utils.register_class(addon_class)
 
             except Exception as error:
@@ -183,19 +183,19 @@ class ModuleManager:
 
             for folder_path in path_iter_queue:
                 if (
-                    (folder_path.is_dir())
-                    and (folder_path.exists())
-                    and (folder_path not in addon_folders)
-                    and (folder_path.name not in folder_blacklist)
+                        (folder_path.is_dir())
+                        and (folder_path.exists())
+                        and (folder_path not in addon_folders)
+                        and (folder_path.name not in folder_blacklist)
                 ):
                     addon_folders.add(folder_path)
 
                     for subfolder_path in folder_path.iterdir():
                         if (
-                            (subfolder_path.is_dir())
-                            and (subfolder_path.exists())
-                            and (subfolder_path not in addon_folders)
-                            and (subfolder_path.name not in folder_blacklist)
+                                (subfolder_path.is_dir())
+                                and (subfolder_path.exists())
+                                and (subfolder_path not in addon_folders)
+                                and (subfolder_path.name not in folder_blacklist)
                         ):
                             path_iter_queue.append(subfolder_path)
                             addon_folders.add(subfolder_path)
@@ -216,9 +216,9 @@ class ModuleManager:
         for folder_path in folder_paths:
             for file in folder_path.iterdir():
                 if (
-                    (file.is_file())
-                    and (file.name not in file_blacklist)
-                    and (file.suffix == ".py")
+                        (file.is_file())
+                        and (file.name not in file_blacklist)
+                        and (file.suffix == ".py")
                 ):
                     addon_files.update({file.name[0:-3]: folder_path})
 
@@ -226,10 +226,10 @@ class ModuleManager:
 
     @staticmethod
     def gather_classes_from_files(
-        _module_path: str,
-        _mute: bool,
-        _module_files: dict[str, Path],
-        _file_blacklist: set[str],
+            _module_path: str,
+            _mute: bool,
+            _module_files: dict[str, Path],
+            _file_blacklist: set[str],
     ) -> set[
         bpy.types.Panel
         | bpy.types.UIList
@@ -245,7 +245,7 @@ class ModuleManager:
         | bpy.types.NodeTree
         | bpy.types.Node
         | bpy.types.NodeSocket
-    ]:
+        ]:
 
         addon_classes: set[
             bpy.types.Panel
@@ -262,7 +262,7 @@ class ModuleManager:
             | bpy.types.NodeTree
             | bpy.types.Node
             | bpy.types.NodeSocket
-        ] = set()
+            ] = set()
 
         if _module_files is not None:
             _module_path = Path(_module_path[0])
@@ -272,8 +272,8 @@ class ModuleManager:
             for file_name in _module_files.keys():
                 if file_name not in _file_blacklist:
                     for addon_class in getmembers(
-                        globals().get(file_name),
-                        isclass,
+                            globals().get(file_name),
+                            isclass,
                     ):
                         addon_classes.add(addon_class[1])
 
@@ -281,11 +281,11 @@ class ModuleManager:
 
     @staticmethod
     def import_files_to_global(
-        _addon_name: str,
-        _module_path: str,
-        _mute: bool,
-        _module_files: dict[str, Path],
-        _file_blacklist: set[str],
+            _addon_name: str,
+            _module_path: str,
+            _mute: bool,
+            _module_files: dict[str, Path],
+            _file_blacklist: set[str],
     ):
 
         __globals = globals()
@@ -294,7 +294,16 @@ class ModuleManager:
 
         for _file_name, _file_path in _module_files.items():
             if _file_name not in _file_blacklist:
-                _relative_folder = _file_path.relative_to(_module_path, walk_up=False)
+
+                _relative_folder = None
+                try:
+                    _relative_folder = _file_path.relative_to(
+                        _module_path, walk_up=False
+                    )
+
+                except TypeError:
+                    _relative_folder = Path(os.path.relpath(_file_path, _module_path))
+
                 _module_name = f"{_addon_name}{'.' if str(_relative_folder) in {'', '.'} else f'.{_relative_folder}.'}{_file_name}"
 
                 if _file_name in __globals:
