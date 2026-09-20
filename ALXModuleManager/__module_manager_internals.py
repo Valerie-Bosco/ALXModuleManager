@@ -85,74 +85,88 @@ class ModuleManager:
                 | bpy.types.NodeSocket
                 ],
     ):
+        classes_dict = dict()
         for addon_class in addon_classes:
-            try:
-                if self.mute:
-                    with open(os.devnull, "w") as print_discard_bin:
-                        with redirect_stdout(print_discard_bin):
-                            if "WorkSpaceTool" in [
-                                base.__name__
-                                for base in getattr(addon_class, "__bases__")
-                            ]:
-                                addon_class: type[bpy.types.WorkSpaceTool]
-                                bpy.utils.register_tool(
-                                    addon_class,
-                                    after=getattr(addon_class, "after", None),
-                                    separator=getattr(addon_class, "separator", False),
-                                    group=getattr(addon_class, "group", False),
-                                )
-                            else:
-                                addon_class: type[
-                                    bpy.types.Panel
-                                    | bpy.types.UIList
-                                    | bpy.types.Menu
-                                    | bpy.types.Header
-                                    | bpy.types.Operator
-                                    | bpy.types.KeyingSetInfo
-                                    | bpy.types.RenderEngine
-                                    | bpy.types.AssetShelf
-                                    | bpy.types.FileHandler
-                                    | bpy.types.PropertyGroup
-                                    | bpy.types.AddonPreferences
-                                    | bpy.types.NodeTree
-                                    | bpy.types.Node
-                                    | bpy.types.NodeSocket
-                                    ]
-                                bpy.utils.register_class(addon_class)
-                else:
-                    if "WorkSpaceTool" in [
-                        base.__name__ for base in getattr(addon_class, "__bases__")
-                    ]:
-                        addon_class: type[bpy.types.WorkSpaceTool]
+            if hasattr(addon_class, "module_manager_order"):
+                if classes_dict.get(addon_class.module_manager_order) is None:
+                    classes_dict[addon_class.module_manager_order] = [addon_class]
+                classes_dict[addon_class.module_manager_order] += [addon_class]
+            else:
+                if classes_dict.get(0) is None:
+                    classes_dict[0] = [addon_class]
+                classes_dict[0] += [addon_class]
 
-                        bpy.utils.register_tool(
-                            addon_class,
-                            after=getattr(addon_class, "after", None),
-                            separator=getattr(addon_class, "separator", False),
-                            group=getattr(addon_class, "group", False),
-                        )
+        for __priority in sorted(classes_dict.keys(), reverse=True):
+            for addon_class in classes_dict[__priority]:
+                try:
+                    if self.mute:
+                        with open(os.devnull, "w") as print_discard_bin:
+                            with redirect_stdout(print_discard_bin):
+                                if "WorkSpaceTool" in [
+                                    base.__name__
+                                    for base in getattr(addon_class, "__bases__")
+                                ]:
+                                    addon_class: type[bpy.types.WorkSpaceTool]
+                                    bpy.utils.register_tool(
+                                        addon_class,
+                                        after=getattr(addon_class, "after", None),
+                                        separator=getattr(
+                                            addon_class, "separator", False
+                                        ),
+                                        group=getattr(addon_class, "group", False),
+                                    )
+                                else:
+                                    addon_class: type[
+                                        bpy.types.Panel
+                                        | bpy.types.UIList
+                                        | bpy.types.Menu
+                                        | bpy.types.Header
+                                        | bpy.types.Operator
+                                        | bpy.types.KeyingSetInfo
+                                        | bpy.types.RenderEngine
+                                        | bpy.types.AssetShelf
+                                        | bpy.types.FileHandler
+                                        | bpy.types.PropertyGroup
+                                        | bpy.types.AddonPreferences
+                                        | bpy.types.NodeTree
+                                        | bpy.types.Node
+                                        | bpy.types.NodeSocket
+                                        ]
+                                    bpy.utils.register_class(addon_class)
                     else:
-                        addon_class: type[
-                            bpy.types.Panel
-                            | bpy.types.UIList
-                            | bpy.types.Menu
-                            | bpy.types.Header
-                            | bpy.types.Operator
-                            | bpy.types.KeyingSetInfo
-                            | bpy.types.RenderEngine
-                            | bpy.types.AssetShelf
-                            | bpy.types.FileHandler
-                            | bpy.types.PropertyGroup
-                            | bpy.types.AddonPreferences
-                            | bpy.types.NodeTree
-                            | bpy.types.Node
-                            | bpy.types.NodeSocket
-                            ]
-                        bpy.utils.register_class(addon_class)
+                        if "WorkSpaceTool" in [
+                            base.__name__ for base in getattr(addon_class, "__bases__")
+                        ]:
+                            addon_class: type[bpy.types.WorkSpaceTool]
 
-            except Exception as error:
-                if not self.mute:
-                    print(error)
+                            bpy.utils.register_tool(
+                                addon_class,
+                                after=getattr(addon_class, "after", None),
+                                separator=getattr(addon_class, "separator", False),
+                                group=getattr(addon_class, "group", False),
+                            )
+                        else:
+                            addon_class: type[
+                                bpy.types.Panel
+                                | bpy.types.UIList
+                                | bpy.types.Menu
+                                | bpy.types.Header
+                                | bpy.types.Operator
+                                | bpy.types.KeyingSetInfo
+                                | bpy.types.RenderEngine
+                                | bpy.types.AssetShelf
+                                | bpy.types.FileHandler
+                                | bpy.types.PropertyGroup
+                                | bpy.types.AddonPreferences
+                                | bpy.types.NodeTree
+                                | bpy.types.Node
+                                | bpy.types.NodeSocket
+                                ]
+                            bpy.utils.register_class(addon_class)
+
+                except Exception as error:
+                    if not self.mute:
+                        print(error)
 
     def __unregister_addon_classes(self, addon_classes: set):
         for addon_class in addon_classes:
